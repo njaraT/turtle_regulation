@@ -7,6 +7,7 @@ from std_msgs.msg import Bool
 from turtlesim.msg import Pose
 
 
+# Noeud ROS 2 charge de calculer et publier la commande pour atteindre un waypoint.
 class SetWayPoint(Node):
     def __init__(self):
         super().__init__('set_way_point')
@@ -29,25 +30,33 @@ class SetWayPoint(Node):
         self.control_timer = self.create_timer(0.03, self.publish_heading_command)
         self.get_logger().info('set_way_point node started')
 
+    # Met a jour la pose courante de la tortue a chaque message recu sur le topic pose.
     def pose_callback(self, msg: Pose) -> None:
         self.pose = msg
 
+    # Calcule l'orientation a atteindre pour viser le waypoint.
     def compute_desired_heading(self) -> float:
+        # Angle de la droite entre la position courante et le waypoint.
         return math.atan2(
             self.waypoint[1] - self.pose.y,
             self.waypoint[0] - self.pose.x,
         )
 
+    # Calcule l'erreur entre l'orientation actuelle et l'orientation desiree.
     def compute_heading_error(self, desired_heading: float) -> float:
         angle_difference = desired_heading - self.pose.theta
+        # Ramene l'erreur dans [-pi, pi] pour tourner dans le sens le plus court.
         return math.atan2(math.sin(angle_difference), math.cos(angle_difference))
 
+    # Calcule la distance entre la tortue et le waypoint.
     def compute_distance_error(self) -> float:
+        # Distance euclidienne entre la tortue et le waypoint.
         return math.sqrt(
             (self.waypoint[1] - self.pose.y) ** 2 +
             (self.waypoint[0] - self.pose.x) ** 2
         )
 
+    # Calcule puis publie la commande de vitesse en fonction de la pose courante.
     def publish_heading_command(self) -> None:
         if self.pose is None:
             return
@@ -60,6 +69,7 @@ class SetWayPoint(Node):
         is_moving = Bool()
 
         if distance_error > self.distance_tolerance:
+            # Commande proportionnelle en distance et en cap.
             cmd_vel.linear.x = self.kpl * distance_error
             cmd_vel.angular.z = self.kp * heading_error
             self.cmd_vel_publisher.publish(cmd_vel)
@@ -68,6 +78,7 @@ class SetWayPoint(Node):
         else:
             is_moving.data = False
             if not self.goal_reached:
+                # On publie une commande nulle une seule fois a l'arrivee.
                 self.cmd_vel_publisher.publish(Twist())
                 self.goal_reached = True
 
