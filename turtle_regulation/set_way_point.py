@@ -4,6 +4,8 @@ from geometry_msgs.msg import Twist
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
+# Service utilise pour modifier dynamiquement le waypoint.
+from turtle_interfaces.srv import SetWayPoint as SetWayPointSrv
 from turtlesim.msg import Pose
 
 
@@ -25,14 +27,32 @@ class SetWayPoint(Node):
             self.pose_callback,
             10,
         )
+        # Publisher de la commande de vitesse de la tortue.
         self.cmd_vel_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+        # Publisher booleen indiquant si la tortue est encore en mouvement.
         self.is_moving_publisher = self.create_publisher(Bool, 'is_moving', 10)
+        # Service permettant de changer le waypoint pendant l'execution.
+        self.set_waypoint_service = self.create_service(
+            SetWayPointSrv,
+            'set_waypoint_service',
+            self.set_waypoint_callback,
+        )
         self.control_timer = self.create_timer(0.03, self.publish_heading_command)
         self.get_logger().info('set_way_point node started')
 
     # Met a jour la pose courante de la tortue a chaque message recu sur le topic pose.
     def pose_callback(self, msg: Pose) -> None:
         self.pose = msg
+
+    # Modifie la valeur du waypoint lorsque le service est appele.
+    def set_waypoint_callback(self, request, response):
+        self.waypoint = (request.x, request.y)
+        self.goal_reached = False
+        response.res = True
+        self.get_logger().info(
+            f'New waypoint received: x={request.x:.2f}, y={request.y:.2f}'
+        )
+        return response
 
     # Calcule l'orientation a atteindre pour viser le waypoint.
     def compute_desired_heading(self) -> float:
@@ -87,6 +107,7 @@ class SetWayPoint(Node):
         now = self.get_clock().now()
         elapsed = (now - self.last_log_time).nanoseconds / 1e9
         if elapsed >= 1.0:
+            # Affiche periodiquement l'etat de la regulation pour faciliter les tests.
             self.get_logger().info(
                 f'distance={distance_error:.2f}, '
                 f'theta={self.pose.theta:.2f}, '

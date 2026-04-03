@@ -9,3 +9,4 @@
 - `Kpl` faible (`0.5`) : la tortue avance lentement vers le waypoint.
 - `Kpl` fort (`1.5`) : la tortue avance plus vite, avec un comportement plus agressif.
 - `Kpl` choisi (`1.0`) : bon compromis entre vitesse de deplacement et stabilite.
+
