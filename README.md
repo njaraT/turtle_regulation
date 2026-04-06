@@ -52,3 +52,18 @@ cd ~/njara_ws
 source install/setup.bash
 ros2 service call /set_waypoint_service turtle_interfaces/srv/SetWayPoint "{x: 5.0, y: 8.0}"
 ```
+
+## Partie 4
+
+Commandes a lancer pour voir le resultat :
+
+Le noeud set_way_point et turtlesim_node doivent deja etre lances.
+
+Dans un autre terminal :
+
+```bash
+cd ~/njara_ws
+source install/setup.bash
+ros2 run turtle_regulation waypoint_client --ros-args \
+  -r is_moving:=/is_moving
+```
